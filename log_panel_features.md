@@ -17,6 +17,7 @@ This file tracks the implemented product features and expected runtime behavior 
 - Watches workspace root `.wix/debug-logs/` for top-level files only.
 - Reacts to file create/change/delete events.
 - Tails files incrementally using byte offsets.
+- Unified visible stream is sorted by parsed timestamp (with ingest-order fallback).
 - Initial attach reads only tail bytes (configurable cap), not whole file.
 - Handles truncation by resetting read offset when file size decreases.
 - Handles partial lines across chunk boundaries.
@@ -24,12 +25,14 @@ This file tracks the implemented product features and expected runtime behavior 
 ## 3) Parsing and Rendering Semantics
 
 - Expected format:
-  - `[ISO_TIMESTAMP] [producer] [level] message`
+  - `[ISO_TIMESTAMP] [level] message`
+  - legacy lines with `[producer]` token are tolerated, but producer token is ignored.
 - Parsed fields:
-  - timestamp token, producer, level, message, raw line.
+  - timestamp token, level, message, raw line.
+  - producer is inferred from source filename convention: `<producer>-debug.log`.
 - Malformed line behavior:
   - line is still displayed
-  - producer is `unknown`
+  - producer stays inferred from filename when available
   - level is `unknown`.
 - Styling:
   - producer colors are auto-assigned from a deterministic hash of producer name (stable per producer, no hardcoded producer mapping)
@@ -97,3 +100,10 @@ This file tracks the implemented product features and expected runtime behavior 
 - Tailer edge-case tests (tail window, partials, truncation, no trailing newline).
 - Webview filtering/search utility tests.
 - Producer color generation tests (deterministic and fallback behavior).
+
+## 9) Sample Data Contract (`plans/debug_log_spam_generator.mjs`)
+
+- Generates one file per producer: `<producer>-debug.log`.
+- Default producer set: `cli`, `code_gen`, `auth`.
+- Uses per-producer sequential line counters in each file.
+- Writes overlapping timestamps across producer files so combined interleaving is visible in the panel.

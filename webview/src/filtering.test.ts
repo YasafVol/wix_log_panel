@@ -44,4 +44,14 @@ describe("webview filtering utils", () => {
     expect(getNextMatchCursor(matches, 2, "next")).toBe(0);
     expect(getNextMatchCursor(matches, 0, "prev")).toBe(2);
   });
+
+  it("returns entries sorted by timestamp after filtering", () => {
+    const withTimestamps: LogEntry[] = [
+      { ...entry("11", "cli", "info", "later"), timestamp: 3000 },
+      { ...entry("12", "cli", "info", "earlier"), timestamp: 1000 },
+      { ...entry("13", "cli", "info", "middle"), timestamp: 2000 }
+    ];
+    const result = filterEntries(withTimestamps, ["cli"], ["info"]);
+    expect(result.map((row) => row.raw)).toEqual(["earlier", "middle", "later"]);
+  });
 });
