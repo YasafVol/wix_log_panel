@@ -1,0 +1,84 @@
+{
+  "name": "wix-debug-logs",
+  "displayName": "Wix Debug Logs",
+  "description": "Terminal-like panel for Wix debug logs.",
+  "version": "0.0.1",
+  "publisher": "wix",
+  "engines": {
+    "vscode": "^1.89.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:wixDebugLogs.openPanel",
+    "workspaceContains:.wix"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "wixDebugLogs.openPanel",
+        "title": "Wix: Open Debug Logs Panel"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "wixDebugLogs",
+          "title": "Wix",
+          "icon": "media/wix.svg"
+        }
+      ]
+    },
+    "views": {
+      "wixDebugLogs": [
+        {
+          "id": "wixDebugLogs.view",
+          "name": "Wix Debug Logs"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Wix Debug Logs",
+      "properties": {
+        "wixDebugLogs.maxLines": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 100,
+          "description": "Maximum number of log lines kept in memory."
+        },
+        "wixDebugLogs.initialReadBytesPerFile": {
+          "type": "number",
+          "default": 262144,
+          "minimum": 1024,
+          "description": "How many bytes are read from the tail of each file during initial attach."
+        },
+        "wixDebugLogs.readChunkBytes": {
+          "type": "number",
+          "default": 65536,
+          "minimum": 1024,
+          "description": "Chunk size used while reading appended log bytes."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "npm run build:extension && npm run build:webview",
+    "build:extension": "tsc -p tsconfig.json",
+    "build:webview": "node ./scripts/build-webview.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/vscode": "^1.89.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.2",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-window": "^1.8.10"
+  }
+}
