@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { FileWatcherService } from "./fileWatcher";
 import { LogParser } from "./logParser";
@@ -14,6 +16,8 @@ export class DebugLogsController implements vscode.Disposable {
   private readonly watcher: FileWatcherService;
   private readonly disposables: vscode.Disposable[] = [];
   private isInitialized = false;
+  private paused = false;
+  private followTail = true;
 
   public constructor(
     private readonly context: vscode.ExtensionContext,
@@ -82,7 +86,7 @@ export class DebugLogsController implements vscode.Disposable {
     }
     this.isInitialized = true;
     await this.watcher.start();
-    this.provider.postMessage({ type: "init", payload: this.store.snapshot() });
+    this.provider.postMessage({ type: "init", payload: this.createSnapshot() });
   }
 
   private onEmptyState(kind: EmptyStateKind): void {
@@ -102,25 +106,102 @@ export class DebugLogsController implements vscode.Disposable {
       this.parser.parseLine(line, filePath)
     );
     const appended = this.store.append(parsedBatch);
+    if (this.paused) {
+      return;
+    }
 
     this.provider.postMessage({
       type: "append",
       payload: {
         entries: appended.accepted,
-        droppedCount: appended.droppedCount
+        droppedCount: appended.droppedCount,
+        knownProducers: this.store.snapshot().knownProducers
       }
     });
   }
 
   private async onWebviewMessage(message: WebviewToHost): Promise<void> {
-    if (message.type !== "reload") {
+    if (message.type === "reload") {
+      this.output.appendLine("Reload requested from webview.");
+      this.store.clear();
+      this.tailer.reset();
+      this.provider.postMessage({ type: "init", payload: this.createSnapshot() });
+      await this.watcher.rebuildWatchers();
       return;
     }
-    this.output.appendLine("Reload requested from webview.");
-    this.store.clear();
-    this.tailer.reset();
-    this.provider.postMessage({ type: "init", payload: this.store.snapshot() });
-    await this.watcher.rebuildWatchers();
+
+    if (message.type === "togglePause") {
+      this.paused = !this.paused;
+      this.provider.postMessage({
+        type: "state",
+        payload: { view: { paused: this.paused, followTail: this.followTail } }
+      });
+      if (!this.paused) {
+        this.provider.postMessage({ type: "init", payload: this.createSnapshot() });
+      }
+      return;
+    }
+
+    if (message.type === "clearView") {
+      this.store.clear();
+      this.provider.postMessage({ type: "init", payload: this.createSnapshot() });
+      return;
+    }
+
+    if (message.type === "setFollowTail") {
+      this.followTail = message.payload.followTail;
+      this.provider.postMessage({
+        type: "state",
+        payload: { view: { paused: this.paused, followTail: this.followTail } }
+      });
+      return;
+    }
+
+    if (message.type === "copyVisibleLogs" || message.type === "copyLogLine") {
+      await vscode.env.clipboard.writeText(message.payload.content);
+      this.output.appendLine("Copied logs to clipboard.");
+      return;
+    }
+
+    if (message.type === "exportVisibleLogs") {
+      const targetUri = await vscode.window.showSaveDialog({
+        saveLabel: "Export Logs",
+        filters: { Text: ["txt"], Log: ["log"] },
+        defaultUri: vscode.Uri.joinPath(
+          this.context.globalStorageUri,
+          "wix-logs-export.txt"
+        )
+      });
+
+      if (!targetUri) {
+        return;
+      }
+      await fs.mkdir(path.dirname(targetUri.fsPath), { recursive: true }).catch(
+        () => undefined
+      );
+      await fs.writeFile(targetUri.fsPath, message.payload.content, "utf8");
+      void vscode.window.showInformationMessage("WIX LOGS exported.");
+      return;
+    }
+
+    if (message.type === "sendLogLineToChat") {
+      const snippet =
+        message.payload.content.length > 120
+          ? `${message.payload.content.slice(0, 117)}...`
+          : message.payload.content;
+      this.output.appendLine(`[mock] Sent to chat: ${snippet}`);
+      void vscode.window.showInformationMessage("Mock action: sent log line to chat.");
+    }
+  }
+
+  private createSnapshot() {
+    return {
+      ...this.store.snapshot(),
+      view: {
+        paused: this.paused,
+        followTail: this.followTail
+      }
+    };
   }
 }
 

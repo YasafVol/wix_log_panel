@@ -1,0 +1,27 @@
+---
+description: Keep WIX LOGS feature inventory current
+alwaysApply: true
+---
+
+# Update `log_panel_features.md` on Product Changes
+
+When changing product behavior or user-visible capabilities in this project, always update `log_panel_features.md` in the same change.
+
+## Must Update For
+
+- New feature added (controls, filters, actions, states, commands).
+- Existing behavior changed (UX flow, naming, semantics, shortcuts).
+- Feature removed or deprecated.
+- Empty-state/error-state behavior changes.
+
+## Update Expectations
+
+- Keep entries concrete and user-facing.
+- Reflect current behavior only (no future roadmap items).
+- Keep sections accurate and short.
+- If a rename happens, update all relevant sections in the file.
+
+## Before Finishing Work
+
+- Verify `log_panel_features.md` reflects all behavior changes in the current diff.
+- If no product behavior changed, no update is required.

@@ -2,3 +2,4 @@ node_modules/
 out/
 webview-dist/
 .DS_Store
+.wix/

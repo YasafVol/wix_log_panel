@@ -1,6 +1,8 @@
 import React from "react";
 import { FixedSizeList as List, ListOnItemsRenderedProps } from "react-window";
+import { detectThemeMode, getProducerColor } from "../producerColors";
 import type { LogEntry } from "../types";
+import { formatTimestamp, type TimeDisplayMode } from "../timeFormat";
 
 const ROW_HEIGHT = 22;
 
@@ -8,12 +10,28 @@ interface LogVirtualListProps {
   entries: LogEntry[];
   height: number;
   width: number;
+  query: string;
+  activeMatchRow: number;
+  timeDisplayMode: TimeDisplayMode;
+  onCopyLine: (content: string) => void;
+  onSendToChat: (content: string) => void;
   onNearBottomChange: (nearBottom: boolean) => void;
   listRef: React.RefObject<List>;
 }
 
 export function LogVirtualList(props: LogVirtualListProps): JSX.Element {
-  const { entries, height, width, onNearBottomChange, listRef } = props;
+  const {
+    entries,
+    height,
+    width,
+    query,
+    activeMatchRow,
+    timeDisplayMode,
+    onCopyLine,
+    onSendToChat,
+    onNearBottomChange,
+    listRef
+  } = props;
 
   const onItemsRendered = React.useCallback(
     ({ visibleStopIndex }: ListOnItemsRenderedProps) => {
@@ -32,7 +50,14 @@ export function LogVirtualList(props: LogVirtualListProps): JSX.Element {
       width={Math.max(0, width)}
       overscanCount={12}
       onItemsRendered={onItemsRendered}
-      itemData={entries}
+      itemData={{
+        entries,
+        query: query.toLowerCase(),
+        activeMatchRow,
+        timeDisplayMode,
+        onCopyLine,
+        onSendToChat
+      }}
     >
       {Row}
     </List>
@@ -46,12 +71,20 @@ function Row({
 }: {
   index: number;
   style: React.CSSProperties;
-  data: LogEntry[];
+  data: {
+    entries: LogEntry[];
+    query: string;
+    activeMatchRow: number;
+    timeDisplayMode: TimeDisplayMode;
+    onCopyLine: (content: string) => void;
+    onSendToChat: (content: string) => void;
+  };
 }): JSX.Element {
-  const entry = data[index];
-  const producerColor = getProducerColor(entry.producer);
+  const entry = data.entries[index];
+  const isActiveMatchRow = data.activeMatchRow === index;
+  const producerColor = getProducerColor(entry.producer, detectThemeMode());
   const levelStyle = getLevelStyle(entry.level);
-  const timestamp = entry.tsRaw ?? "-";
+  const timestamp = formatTimestamp(entry, data.timeDisplayMode);
   const levelText = entry.level.toUpperCase();
 
   return (
@@ -64,30 +97,61 @@ function Row({
         fontSize: "12px",
         whiteSpace: "pre",
         overflow: "hidden",
-        textOverflow: "ellipsis",
+        backgroundColor: isActiveMatchRow
+          ? "color-mix(in srgb, var(--vscode-textLink-foreground) 15%, transparent)"
+          : "transparent",
         ...levelStyle.line
       }}
       title={entry.raw}
     >
       <span style={{ opacity: 0.65 }}>[{timestamp}] </span>
       <span style={{ color: producerColor }}>[{entry.producer}] </span>
-      <span style={levelStyle.tag}>[{levelText}] </span>
-      <span>{entry.message}</span>
+      <span style={levelStyle.tag}>[{levelText}] </span>{" "}
+      <span>{renderMessageWithHighlight(entry.message, data.query)}</span>
+      <span style={{ float: "right", display: "inline-flex", gap: 4 }}>
+        <button onClick={() => data.onCopyLine(entry.raw)}>Copy</button>
+        <button onClick={() => data.onSendToChat(entry.raw)}>Send to chat</button>
+      </span>
     </div>
   );
 }
 
-function getProducerColor(producer: string): string {
-  switch (producer) {
-    case "cli":
-      return "#4F8CFF";
-    case "dev-server":
-      return "#22C55E";
-    case "linter":
-      return "#C084FC";
-    default:
-      return "var(--vscode-descriptionForeground)";
+function renderMessageWithHighlight(message: string, queryLower: string): React.ReactNode {
+  if (!queryLower) {
+    return message;
   }
+
+  const lowerMessage = message.toLowerCase();
+  if (!lowerMessage.includes(queryLower)) {
+    return message;
+  }
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  while (cursor < message.length) {
+    const nextMatch = lowerMessage.indexOf(queryLower, cursor);
+    if (nextMatch < 0) {
+      nodes.push(message.slice(cursor));
+      break;
+    }
+    if (nextMatch > cursor) {
+      nodes.push(message.slice(cursor, nextMatch));
+    }
+    const end = nextMatch + queryLower.length;
+    nodes.push(
+      <mark
+        key={`${nextMatch}-${end}`}
+        style={{
+          background: "var(--vscode-editor-findMatchBackground)",
+          color: "inherit"
+        }}
+      >
+        {message.slice(nextMatch, end)}
+      </mark>
+    );
+    cursor = end;
+  }
+  return <>{nodes}</>;
 }
 
 function getLevelStyle(level: LogEntry["level"]): {

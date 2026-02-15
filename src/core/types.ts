@@ -31,15 +31,36 @@ export interface UiSnapshot {
   entries: LogEntry[];
   droppedCount: number;
   knownProducers: string[];
+  view: {
+    paused: boolean;
+    followTail: boolean;
+  };
 }
 
 export type HostToWebview =
   | { type: "init"; payload: UiSnapshot }
-  | { type: "append"; payload: { entries: LogEntry[]; droppedCount: number } }
+  | {
+      type: "append";
+      payload: { entries: LogEntry[]; droppedCount: number; knownProducers: string[] };
+    }
+  | { type: "state"; payload: { view: { paused: boolean; followTail: boolean } } }
   | { type: "emptyState"; payload: { kind: EmptyStateKind } }
   | { type: "error"; payload: { message: string } };
 
-export type WebviewToHost = { type: "reload" };
+export type WebviewToHost =
+  | { type: "setProducerFilter"; payload: { producers: string[] } }
+  | { type: "setLevelFilter"; payload: { levels: LogLevel[] } }
+  | { type: "setQuery"; payload: { query: string } }
+  | { type: "togglePause" }
+  | { type: "clearView" }
+  | { type: "reload" }
+  | { type: "setFollowTail"; payload: { followTail: boolean } }
+  | { type: "searchNext" }
+  | { type: "searchPrev" }
+  | { type: "copyVisibleLogs"; payload: { content: string } }
+  | { type: "exportVisibleLogs"; payload: { content: string } }
+  | { type: "copyLogLine"; payload: { content: string } }
+  | { type: "sendLogLineToChat"; payload: { content: string } };
 
 export interface LogSettings {
   maxLines: number;
