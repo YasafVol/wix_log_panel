@@ -1,7 +1,7 @@
-const SATURATION = 68;
-const LIGHTNESS_DARK = 58;
-const LIGHTNESS_LIGHT = 42;
-const LIGHTNESS_HIGH_CONTRAST = 50;
+const SATURATION = 74;
+const LIGHTNESS_DARK = 68;
+const LIGHTNESS_LIGHT = 50;
+const LIGHTNESS_HIGH_CONTRAST = 62;
 
 export type ThemeMode = "light" | "dark" | "highContrast";
 

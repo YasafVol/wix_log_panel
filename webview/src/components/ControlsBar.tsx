@@ -65,25 +65,80 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
     onToggleTimeDisplayMode
   } = props;
 
+  const actionButtonBase: React.CSSProperties = {
+    height: 24,
+    padding: "0 10px",
+    borderRadius: 4,
+    border: "1px solid var(--vscode-button-border, transparent)",
+    fontSize: 12,
+    cursor: "pointer"
+  };
+
+  const primaryButton: React.CSSProperties = {
+    ...actionButtonBase,
+    background: "var(--vscode-button-background)",
+    color: "var(--vscode-button-foreground)"
+  };
+
+  const secondaryButton: React.CSSProperties = {
+    ...actionButtonBase,
+    background: "var(--vscode-button-secondaryBackground, var(--vscode-button-background))",
+    color: "var(--vscode-button-secondaryForeground, var(--vscode-button-foreground))"
+  };
+
+  const subtleButton: React.CSSProperties = {
+    ...actionButtonBase,
+    background: "var(--vscode-editorWidget-background)",
+    color: "var(--vscode-editor-foreground)",
+    border: "1px solid var(--vscode-panel-border)"
+  };
+
   return (
     <header
       style={{
         display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 12,
+        flexDirection: "column",
+        gap: 8,
         padding: "8px 12px",
         borderBottom: "1px solid var(--vscode-panel-border)"
       }}
     >
-      <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 240 }}>
-        <div style={{ fontWeight: 600 }}>WIX LOGS</div>
-        {droppedCount > 0 && <span style={{ opacity: 0.75 }}>Dropped: {droppedCount}</span>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontWeight: 600, minWidth: 110 }}>WIX LOGS</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
+          {droppedCount > 0 && (
+            <span style={{ opacity: 0.75, marginRight: 8 }}>Dropped: {droppedCount}</span>
+          )}
+          <button style={subtleButton} onClick={onCopyVisible}>
+            Copy Visible
+          </button>
+          <button style={subtleButton} onClick={onExportVisible}>
+            Export
+          </button>
+        </div>
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <details style={{ position: "relative" }}>
-          <summary style={{ cursor: "pointer" }}>Producer ({selectedProducers.length})</summary>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            style={{ ...secondaryButton, width: 98, justifyContent: "center" }}
+            onClick={onToggleTimeDisplayMode}
+          >
+            Time: {timeDisplayMode === "iso" ? "ISO" : "Short"}
+          </button>
+          <details style={{ position: "relative" }}>
+            <summary
+              style={{
+                ...subtleButton,
+                width: 180,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                listStyle: "none"
+              }}
+            >
+              <span>Producer ({selectedProducers.length})</span>
+              <span style={{ marginLeft: 8 }}>▾</span>
+            </summary>
           <div
             style={{
               position: "absolute",
@@ -100,8 +155,12 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
             }}
           >
             <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-              <button onClick={onSelectAllProducers}>All</button>
-              <button onClick={onClearProducers}>None</button>
+              <button style={subtleButton} onClick={onSelectAllProducers}>
+                All
+              </button>
+              <button style={subtleButton} onClick={onClearProducers}>
+                None
+              </button>
             </div>
             {producers.map((producer) => (
               <label key={producer} style={{ display: "block", fontSize: 12 }}>
@@ -122,7 +181,19 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
           </div>
         </details>
         <details style={{ position: "relative" }}>
-          <summary style={{ cursor: "pointer" }}>Log Level ({selectedLevels.length})</summary>
+          <summary
+            style={{
+              ...subtleButton,
+              width: 180,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              listStyle: "none"
+            }}
+          >
+            <span>Log Level ({selectedLevels.length})</span>
+            <span style={{ marginLeft: 8 }}>▾</span>
+          </summary>
           <div
             style={{
               position: "absolute",
@@ -139,9 +210,15 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
             }}
           >
             <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-              <button onClick={onSelectAllLevels}>All</button>
-              <button onClick={onClearLevels}>None</button>
-              <button onClick={onErrorsOnly}>Errors only</button>
+              <button style={subtleButton} onClick={onSelectAllLevels}>
+                All
+              </button>
+              <button style={subtleButton} onClick={onClearLevels}>
+                None
+              </button>
+              <button style={subtleButton} onClick={onErrorsOnly}>
+                Errors only
+              </button>
             </div>
             {(["error", "warn", "info", "debug", "unknown"] as LogLevel[]).map((level) => (
               <label key={level} style={{ display: "block", fontSize: 12 }}>
@@ -161,32 +238,56 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
             ))}
           </div>
         </details>
+        <button
+          style={{ ...secondaryButton, width: 34, padding: 0, fontSize: 14 }}
+          onClick={onTogglePause}
+          title={paused ? "Resume" : "Pause"}
+          aria-label={paused ? "Resume" : "Pause"}
+        >
+          {paused ? "▶" : "⏸"}
+        </button>
+        <button style={primaryButton} onClick={onFollowTail}>
+          Jump to latest
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto" }}>
         <input
           ref={searchInputRef}
           value={query}
           placeholder="Search"
+          style={{ height: 24, minWidth: 200, borderRadius: 4 }}
           onChange={(event) => onQueryChange(event.target.value)}
         />
-        <button onClick={onSearchPrev} disabled={matchCount === 0}>
-          Prev
+        <button
+          style={{ ...subtleButton, width: 28, padding: 0, fontSize: 14 }}
+          onClick={onSearchPrev}
+          disabled={matchCount === 0}
+          title="Previous match"
+          aria-label="Previous match"
+        >
+          ↑
         </button>
-        <button onClick={onSearchNext} disabled={matchCount === 0}>
-          Next
+        <button
+          style={{ ...subtleButton, width: 28, padding: 0, fontSize: 14 }}
+          onClick={onSearchNext}
+          disabled={matchCount === 0}
+          title="Next match"
+          aria-label="Next match"
+        >
+          ↓
         </button>
         {query && (
           <span style={{ opacity: 0.75, minWidth: 52, textAlign: "right" }}>
             {activeMatchLabel}
           </span>
         )}
-        <button onClick={onTogglePause}>{paused ? "Resume" : "Pause"}</button>
-        <button onClick={onToggleTimeDisplayMode}>
-          Time: {timeDisplayMode === "iso" ? "ISO" : "Short"}
+        <button style={primaryButton} onClick={onReload}>
+          Reload
         </button>
-        <button onClick={onClear}>Clear</button>
-        <button onClick={onCopyVisible}>Copy Visible</button>
-        <button onClick={onExportVisible}>Export</button>
-        <button onClick={onReload}>Reload</button>
-        {!followTail && <button onClick={onFollowTail}>Follow Tail</button>}
+        <button style={secondaryButton} onClick={onClear}>
+          Clear
+        </button>
+      </div>
       </div>
     </header>
   );
