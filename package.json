@@ -12,6 +12,7 @@
   ],
   "activationEvents": [
     "onCommand:wixDebugLogs.openPanel",
+    "onView:wixDebugLogs.view",
     "workspaceContains:.wix"
   ],
   "main": "./out/extension.js",
@@ -23,7 +24,7 @@
       }
     ],
     "viewsContainers": {
-      "activitybar": [
+      "panel": [
         {
           "id": "wixDebugLogs",
           "title": "Wix",
@@ -35,7 +36,8 @@
       "wixDebugLogs": [
         {
           "id": "wixDebugLogs.view",
-          "name": "Wix Debug Logs"
+          "name": "Wix Debug Logs",
+          "type": "webview"
         }
       ]
     },

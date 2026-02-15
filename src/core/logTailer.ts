@@ -31,7 +31,10 @@ export class LogTailerService {
       };
       this.states.set(filePath, state);
 
-      const lines = await this.readRangeToLines(state, stat.size);
+      const lines = await this.readRangeToLines(state, stat.size, {
+        skipLeadingPartial: initialOffset > 0,
+        flushTrailingAtEof: true
+      });
       return { lines, fileMissing: false };
     } catch {
       this.states.delete(filePath);
@@ -58,7 +61,10 @@ export class LogTailerService {
       }
 
       state.lastSize = stat.size;
-      const lines = await this.readRangeToLines(state, stat.size);
+      const lines = await this.readRangeToLines(state, stat.size, {
+        skipLeadingPartial: false,
+        flushTrailingAtEof: false
+      });
       return { lines, fileMissing: false };
     } catch {
       this.states.delete(filePath);
@@ -76,7 +82,8 @@ export class LogTailerService {
 
   private async readRangeToLines(
     state: TailFileState,
-    endOffset: number
+    endOffset: number,
+    options: { skipLeadingPartial: boolean; flushTrailingAtEof: boolean }
   ): Promise<string[]> {
     if (endOffset <= state.offset) {
       return [];
@@ -84,6 +91,8 @@ export class LogTailerService {
 
     const handle = await fs.open(state.filePath, "r");
     const lines: string[] = [];
+    let leftover = state.leftover;
+    let droppingLeadingPartial = options.skipLeadingPartial;
 
     try {
       while (state.offset < endOffset) {
@@ -101,9 +110,22 @@ export class LogTailerService {
         }
 
         state.offset += bytesRead;
-        const chunkText = `${state.leftover}${buffer.subarray(0, bytesRead).toString("utf8")}`;
+        let chunkText = `${leftover}${buffer
+          .subarray(0, bytesRead)
+          .toString("utf8")}`;
+
+        if (droppingLeadingPartial) {
+          const firstBreak = chunkText.indexOf("\n");
+          if (firstBreak < 0) {
+            leftover = "";
+            continue;
+          }
+          chunkText = chunkText.slice(firstBreak + 1);
+          droppingLeadingPartial = false;
+        }
+
         const parts = chunkText.split("\n");
-        state.leftover = parts.pop() ?? "";
+        leftover = parts.pop() ?? "";
         for (const line of parts) {
           lines.push(line);
         }
@@ -112,6 +134,12 @@ export class LogTailerService {
       await handle.close();
     }
 
+    if (options.flushTrailingAtEof && leftover.length > 0 && lines.length === 0) {
+      lines.push(leftover);
+      leftover = "";
+    }
+
+    state.leftover = leftover;
     return lines;
   }
 }
