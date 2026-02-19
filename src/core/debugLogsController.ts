@@ -157,7 +157,7 @@ export class DebugLogsController implements vscode.Disposable {
       return;
     }
 
-    if (message.type === "copyVisibleLogs" || message.type === "copyLogLine") {
+    if (message.type === "copyVisibleLogs") {
       await vscode.env.clipboard.writeText(message.payload.content);
       this.output.appendLine("Copied logs to clipboard.");
       return;
@@ -184,14 +184,6 @@ export class DebugLogsController implements vscode.Disposable {
       return;
     }
 
-    if (message.type === "sendLogLineToChat") {
-      const snippet =
-        message.payload.content.length > 120
-          ? `${message.payload.content.slice(0, 117)}...`
-          : message.payload.content;
-      this.output.appendLine(`[mock] Sent to chat: ${snippet}`);
-      void vscode.window.showInformationMessage("Mock action: sent log line to chat.");
-    }
   }
 
   private createSnapshot() {

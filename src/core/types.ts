@@ -50,17 +50,12 @@ export type HostToWebview =
 export type WebviewToHost =
   | { type: "setProducerFilter"; payload: { producers: string[] } }
   | { type: "setLevelFilter"; payload: { levels: LogLevel[] } }
-  | { type: "setQuery"; payload: { query: string } }
   | { type: "togglePause" }
   | { type: "clearView" }
   | { type: "reload" }
   | { type: "setFollowTail"; payload: { followTail: boolean } }
-  | { type: "searchNext" }
-  | { type: "searchPrev" }
   | { type: "copyVisibleLogs"; payload: { content: string } }
-  | { type: "exportVisibleLogs"; payload: { content: string } }
-  | { type: "copyLogLine"; payload: { content: string } }
-  | { type: "sendLogLineToChat"; payload: { content: string } };
+  | { type: "exportVisibleLogs"; payload: { content: string } };
 
 export interface LogSettings {
   maxLines: number;

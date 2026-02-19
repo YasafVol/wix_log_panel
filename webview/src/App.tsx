@@ -2,7 +2,7 @@ import React from "react";
 import { FixedSizeList as List } from "react-window";
 import { ControlsBar } from "./components/ControlsBar";
 import { LogVirtualList } from "./components/LogVirtualList";
-import { buildMatchIndices, filterEntries, getNextMatchCursor } from "./filtering";
+import { filterEntries } from "./filtering";
 import type { TimeDisplayMode } from "./timeFormat";
 import type {
   EmptyStateKind,
@@ -29,13 +29,10 @@ export function App(): JSX.Element {
   const [followTail, setFollowTail] = React.useState(true);
   const [selectedProducers, setSelectedProducers] = React.useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = React.useState<LogLevel[]>(ALL_LEVELS);
-  const [query, setQuery] = React.useState("");
-  const [activeMatchCursor, setActiveMatchCursor] = React.useState(-1);
   const [timeDisplayMode, setTimeDisplayMode] =
     React.useState<TimeDisplayMode>("iso");
   const [size, setSize] = React.useState({ width: 1, height: 1 });
   const producerFilterDirtyRef = React.useRef(false);
-  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const listRef = React.useRef<List>(null);
   const listContainerRef = React.useRef<HTMLDivElement>(null);
@@ -43,14 +40,6 @@ export function App(): JSX.Element {
     () => filterEntries(entries, selectedProducers, selectedLevels),
     [entries, selectedProducers, selectedLevels]
   );
-  const matchIndices = React.useMemo(
-    () => buildMatchIndices(filteredEntries, query),
-    [filteredEntries, query]
-  );
-  const activeMatchRow =
-    activeMatchCursor >= 0 && activeMatchCursor < matchIndices.length
-      ? matchIndices[activeMatchCursor]
-      : -1;
 
   React.useEffect(() => {
     const listener = (event: MessageEvent<HostToWebview>) => {
@@ -93,57 +82,11 @@ export function App(): JSX.Element {
   }, []);
 
   React.useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        return;
-      }
-
-      if (!query.trim()) {
-        return;
-      }
-
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        const cursor = getNextMatchCursor(matchIndices, activeMatchCursor, "next");
-        setActiveMatchCursor(cursor);
-        return;
-      }
-      if (event.key === "Enter" && event.shiftKey) {
-        event.preventDefault();
-        const cursor = getNextMatchCursor(matchIndices, activeMatchCursor, "prev");
-        setActiveMatchCursor(cursor);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeMatchCursor, matchIndices, query]);
-
-  React.useEffect(() => {
     if (!followTail || filteredEntries.length === 0) {
       return;
     }
     listRef.current?.scrollToItem(filteredEntries.length - 1, "end");
   }, [filteredEntries, followTail]);
-
-  React.useEffect(() => {
-    if (matchIndices.length === 0) {
-      setActiveMatchCursor(-1);
-      return;
-    }
-    if (activeMatchCursor >= matchIndices.length) {
-      setActiveMatchCursor(matchIndices.length - 1);
-    }
-  }, [activeMatchCursor, matchIndices]);
-
-  React.useEffect(() => {
-    if (activeMatchRow < 0) {
-      return;
-    }
-    listRef.current?.scrollToItem(activeMatchRow, "center");
-  }, [activeMatchRow]);
 
   React.useEffect(() => {
     const node = listContainerRef.current;
@@ -191,21 +134,12 @@ export function App(): JSX.Element {
         producers={knownProducers}
         selectedProducers={selectedProducers}
         selectedLevels={selectedLevels}
-        query={query}
-        matchCount={matchIndices.length}
-        activeMatchLabel={
-          matchIndices.length === 0 ? "0/0" : `${Math.max(activeMatchCursor + 1, 1)}/${matchIndices.length}`
-        }
         onTogglePause={() => vscodeApi.postMessage({ type: "togglePause" })}
         onToggleTimeDisplayMode={() =>
           setTimeDisplayMode((previous) => (previous === "iso" ? "short" : "iso"))
         }
         timeDisplayMode={timeDisplayMode}
-        onClear={() => {
-          setQuery("");
-          setActiveMatchCursor(-1);
-          vscodeApi.postMessage({ type: "clearView" });
-        }}
+        onClear={() => vscodeApi.postMessage({ type: "clearView" })}
         onFollowTail={onFollowTail}
         onReload={() => vscodeApi.postMessage({ type: "reload" })}
         onProducerFilterChange={(next) => {
@@ -216,25 +150,6 @@ export function App(): JSX.Element {
         onLevelFilterChange={(next) => {
           setSelectedLevels(next);
           vscodeApi.postMessage({ type: "setLevelFilter", payload: { levels: next } });
-        }}
-        onQueryChange={(next) => {
-          setQuery(next);
-          setActiveMatchCursor(-1);
-          vscodeApi.postMessage({ type: "setQuery", payload: { query: next } });
-        }}
-        onSearchNext={() => {
-          const cursor = getNextMatchCursor(matchIndices, activeMatchCursor, "next");
-          setActiveMatchCursor(cursor);
-          setFollowTail(false);
-          vscodeApi.postMessage({ type: "searchNext" });
-          vscodeApi.postMessage({ type: "setFollowTail", payload: { followTail: false } });
-        }}
-        onSearchPrev={() => {
-          const cursor = getNextMatchCursor(matchIndices, activeMatchCursor, "prev");
-          setActiveMatchCursor(cursor);
-          setFollowTail(false);
-          vscodeApi.postMessage({ type: "searchPrev" });
-          vscodeApi.postMessage({ type: "setFollowTail", payload: { followTail: false } });
         }}
         onSelectAllProducers={() => {
           producerFilterDirtyRef.current = true;
@@ -276,7 +191,6 @@ export function App(): JSX.Element {
             payload: { content: filteredEntries.map((entry) => entry.raw).join("\n") }
           })
         }
-        searchInputRef={searchInputRef}
       />
       {errorMessage && (
         <div style={{ padding: "8px 12px", color: "var(--vscode-errorForeground)" }}>
@@ -289,15 +203,7 @@ export function App(): JSX.Element {
         <div ref={listContainerRef} style={{ flex: 1, minHeight: 0 }}>
           <LogVirtualList
             entries={filteredEntries}
-            query={query}
-            activeMatchRow={activeMatchRow}
             timeDisplayMode={timeDisplayMode}
-            onCopyLine={(content) =>
-              vscodeApi.postMessage({ type: "copyLogLine", payload: { content } })
-            }
-            onSendToChat={(content) =>
-              vscodeApi.postMessage({ type: "sendLogLineToChat", payload: { content } })
-            }
             listRef={listRef}
             height={size.height}
             width={size.width}

@@ -10,11 +10,7 @@ interface LogVirtualListProps {
   entries: LogEntry[];
   height: number;
   width: number;
-  query: string;
-  activeMatchRow: number;
   timeDisplayMode: TimeDisplayMode;
-  onCopyLine: (content: string) => void;
-  onSendToChat: (content: string) => void;
   onNearBottomChange: (nearBottom: boolean) => void;
   listRef: React.RefObject<List>;
 }
@@ -24,15 +20,10 @@ export function LogVirtualList(props: LogVirtualListProps): JSX.Element {
     entries,
     height,
     width,
-    query,
-    activeMatchRow,
     timeDisplayMode,
-    onCopyLine,
-    onSendToChat,
     onNearBottomChange,
     listRef
   } = props;
-  const [hoveredRow, setHoveredRow] = React.useState<number | null>(null);
 
   const onItemsRendered = React.useCallback(
     ({ visibleStopIndex }: ListOnItemsRenderedProps) => {
@@ -53,13 +44,7 @@ export function LogVirtualList(props: LogVirtualListProps): JSX.Element {
       onItemsRendered={onItemsRendered}
       itemData={{
         entries,
-        query: query.toLowerCase(),
-        activeMatchRow,
-        timeDisplayMode,
-        hoveredRow,
-        setHoveredRow,
-        onCopyLine,
-        onSendToChat
+        timeDisplayMode
       }}
     >
       {Row}
@@ -76,18 +61,10 @@ function Row({
   style: React.CSSProperties;
   data: {
     entries: LogEntry[];
-    query: string;
-    activeMatchRow: number;
     timeDisplayMode: TimeDisplayMode;
-    hoveredRow: number | null;
-    setHoveredRow: (value: number | null) => void;
-    onCopyLine: (content: string) => void;
-    onSendToChat: (content: string) => void;
   };
 }): JSX.Element {
   const entry = data.entries[index];
-  const isActiveMatchRow = data.activeMatchRow === index;
-  const isHovered = data.hoveredRow === index;
   const producerColor = getProducerColor(entry.producer, detectThemeMode());
   const levelStyle = getLevelStyle(entry.level);
   const timestamp = formatTimestamp(entry, data.timeDisplayMode);
@@ -99,89 +76,22 @@ function Row({
         ...style,
         position: "relative",
         padding: "2px 10px",
-        paddingRight: 150,
         boxSizing: "border-box",
         fontFamily: "var(--vscode-editor-font-family)",
         fontSize: "12px",
         whiteSpace: "pre",
         overflow: "hidden",
-        backgroundColor: isActiveMatchRow
-          ? "color-mix(in srgb, var(--vscode-textLink-foreground) 15%, transparent)"
-          : "transparent",
+        backgroundColor: "transparent",
         ...levelStyle.line
       }}
-      onMouseEnter={() => data.setHoveredRow(index)}
-      onMouseLeave={() => data.setHoveredRow(null)}
       title={entry.raw}
     >
       <span style={{ opacity: 0.65 }}>[{timestamp}] </span>
       <span style={{ color: producerColor }}>[{entry.producer}] </span>
       <span style={levelStyle.tag}>[{levelText}] </span>{" "}
-      <span>{renderMessageWithHighlight(entry.message, data.query)}</span>
-      <span
-        style={{
-          position: "absolute",
-          right: 8,
-          top: 1,
-          display: "inline-flex",
-          gap: 4,
-          opacity: isHovered ? 1 : 0,
-          pointerEvents: isHovered ? "auto" : "none"
-        }}
-      >
-        <button
-          style={{ height: 20, padding: "0 8px", fontSize: 11 }}
-          onClick={() => data.onCopyLine(entry.raw)}
-        >
-          Copy
-        </button>
-        <button
-          style={{ height: 20, padding: "0 8px", fontSize: 11 }}
-          onClick={() => data.onSendToChat(entry.raw)}
-        >
-          Send to chat
-        </button>
-      </span>
+      <span>{entry.message}</span>
     </div>
   );
-}
-
-function renderMessageWithHighlight(message: string, queryLower: string): React.ReactNode {
-  if (!queryLower) {
-    return message;
-  }
-
-  const lowerMessage = message.toLowerCase();
-  if (!lowerMessage.includes(queryLower)) {
-    return message;
-  }
-
-  const nodes: React.ReactNode[] = [];
-  let cursor = 0;
-  while (cursor < message.length) {
-    const nextMatch = lowerMessage.indexOf(queryLower, cursor);
-    if (nextMatch < 0) {
-      nodes.push(message.slice(cursor));
-      break;
-    }
-    if (nextMatch > cursor) {
-      nodes.push(message.slice(cursor, nextMatch));
-    }
-    const end = nextMatch + queryLower.length;
-    nodes.push(
-      <mark
-        key={`${nextMatch}-${end}`}
-        style={{
-          background: "var(--vscode-editor-findMatchBackground)",
-          color: "inherit"
-        }}
-      >
-        {message.slice(nextMatch, end)}
-      </mark>
-    );
-    cursor = end;
-  }
-  return <>{nodes}</>;
 }
 
 function getLevelStyle(level: LogEntry["level"]): {

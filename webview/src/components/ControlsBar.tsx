@@ -9,18 +9,12 @@ interface ControlsBarProps {
   producers: string[];
   selectedProducers: string[];
   selectedLevels: LogLevel[];
-  query: string;
-  matchCount: number;
-  activeMatchLabel: string;
   onTogglePause: () => void;
   onClear: () => void;
   onFollowTail: () => void;
   onReload: () => void;
   onProducerFilterChange: (value: string[]) => void;
   onLevelFilterChange: (value: LogLevel[]) => void;
-  onQueryChange: (value: string) => void;
-  onSearchNext: () => void;
-  onSearchPrev: () => void;
   onSelectAllProducers: () => void;
   onClearProducers: () => void;
   onSelectAllLevels: () => void;
@@ -28,7 +22,6 @@ interface ControlsBarProps {
   onErrorsOnly: () => void;
   onCopyVisible: () => void;
   onExportVisible: () => void;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
   timeDisplayMode: TimeDisplayMode;
   onToggleTimeDisplayMode: () => void;
 }
@@ -41,18 +34,12 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
     producers,
     selectedProducers,
     selectedLevels,
-    query,
-    matchCount,
-    activeMatchLabel,
     onTogglePause,
     onClear,
     onFollowTail,
     onReload,
     onProducerFilterChange,
     onLevelFilterChange,
-    onQueryChange,
-    onSearchNext,
-    onSearchPrev,
     onSelectAllProducers,
     onClearProducers,
     onSelectAllLevels,
@@ -60,7 +47,6 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
     onErrorsOnly,
     onCopyVisible,
     onExportVisible,
-    searchInputRef,
     timeDisplayMode,
     onToggleTimeDisplayMode
   } = props;
@@ -117,7 +103,16 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
           </button>
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 8,
+          alignItems: "center",
+          flexWrap: "wrap"
+        }}
+      >
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <button
             style={{ ...secondaryButton, width: 98, justifyContent: "center" }}
@@ -125,6 +120,7 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
           >
             Time: {timeDisplayMode === "iso" ? "ISO" : "Short"}
           </button>
+
           <details style={{ position: "relative" }}>
             <summary
               style={{
@@ -139,155 +135,129 @@ export function ControlsBar(props: ControlsBarProps): JSX.Element {
               <span>Producer ({selectedProducers.length})</span>
               <span style={{ marginLeft: 8 }}>▾</span>
             </summary>
-          <div
-            style={{
-              position: "absolute",
-              top: "110%",
-              left: 0,
-              zIndex: 20,
-              minWidth: 180,
-              maxHeight: 220,
-              overflow: "auto",
-              padding: 8,
-              border: "1px solid var(--vscode-panel-border)",
-              background: "var(--vscode-editor-background)",
-              boxShadow: "0 6px 20px rgba(0,0,0,0.35)"
-            }}
-          >
-            <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-              <button style={subtleButton} onClick={onSelectAllProducers}>
-                All
-              </button>
-              <button style={subtleButton} onClick={onClearProducers}>
-                None
-              </button>
+            <div
+              style={{
+                position: "absolute",
+                top: "110%",
+                left: 0,
+                zIndex: 20,
+                minWidth: 180,
+                maxHeight: 220,
+                overflow: "auto",
+                padding: 8,
+                border: "1px solid var(--vscode-panel-border)",
+                background: "var(--vscode-editor-background)",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.35)"
+              }}
+            >
+              <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                <button style={subtleButton} onClick={onSelectAllProducers}>
+                  All
+                </button>
+                <button style={subtleButton} onClick={onClearProducers}>
+                  None
+                </button>
+              </div>
+              {producers.map((producer) => (
+                <label key={producer} style={{ display: "block", fontSize: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedProducers.includes(producer)}
+                    onChange={(event) =>
+                      onProducerFilterChange(
+                        event.target.checked
+                          ? [...selectedProducers, producer]
+                          : selectedProducers.filter((value) => value !== producer)
+                      )
+                    }
+                  />{" "}
+                  {producer}
+                </label>
+              ))}
             </div>
-            {producers.map((producer) => (
-              <label key={producer} style={{ display: "block", fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={selectedProducers.includes(producer)}
-                  onChange={(event) =>
-                    onProducerFilterChange(
-                      event.target.checked
-                        ? [...selectedProducers, producer]
-                        : selectedProducers.filter((value) => value !== producer)
-                    )
-                  }
-                />{" "}
-                {producer}
-              </label>
-            ))}
-          </div>
-        </details>
-        <details style={{ position: "relative" }}>
-          <summary
-            style={{
-              ...subtleButton,
-              width: 180,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              listStyle: "none"
-            }}
-          >
-            <span>Log Level ({selectedLevels.length})</span>
-            <span style={{ marginLeft: 8 }}>▾</span>
-          </summary>
-          <div
-            style={{
-              position: "absolute",
-              top: "110%",
-              left: 0,
-              zIndex: 20,
-              minWidth: 180,
-              maxHeight: 220,
-              overflow: "auto",
-              padding: 8,
-              border: "1px solid var(--vscode-panel-border)",
-              background: "var(--vscode-editor-background)",
-              boxShadow: "0 6px 20px rgba(0,0,0,0.35)"
-            }}
-          >
-            <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-              <button style={subtleButton} onClick={onSelectAllLevels}>
-                All
-              </button>
-              <button style={subtleButton} onClick={onClearLevels}>
-                None
-              </button>
-              <button style={subtleButton} onClick={onErrorsOnly}>
-                Errors only
-              </button>
+          </details>
+
+          <details style={{ position: "relative" }}>
+            <summary
+              style={{
+                ...subtleButton,
+                width: 180,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                listStyle: "none"
+              }}
+            >
+              <span>Log Level ({selectedLevels.length})</span>
+              <span style={{ marginLeft: 8 }}>▾</span>
+            </summary>
+            <div
+              style={{
+                position: "absolute",
+                top: "110%",
+                left: 0,
+                zIndex: 20,
+                minWidth: 180,
+                maxHeight: 220,
+                overflow: "auto",
+                padding: 8,
+                border: "1px solid var(--vscode-panel-border)",
+                background: "var(--vscode-editor-background)",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.35)"
+              }}
+            >
+              <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                <button style={subtleButton} onClick={onSelectAllLevels}>
+                  All
+                </button>
+                <button style={subtleButton} onClick={onClearLevels}>
+                  None
+                </button>
+                <button style={subtleButton} onClick={onErrorsOnly}>
+                  Errors only
+                </button>
+              </div>
+              {(["error", "warn", "info", "debug", "unknown"] as LogLevel[]).map((level) => (
+                <label key={level} style={{ display: "block", fontSize: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedLevels.includes(level)}
+                    onChange={(event) =>
+                      onLevelFilterChange(
+                        event.target.checked
+                          ? [...selectedLevels, level]
+                          : selectedLevels.filter((value) => value !== level)
+                      )
+                    }
+                  />{" "}
+                  {level}
+                </label>
+              ))}
             </div>
-            {(["error", "warn", "info", "debug", "unknown"] as LogLevel[]).map((level) => (
-              <label key={level} style={{ display: "block", fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={selectedLevels.includes(level)}
-                  onChange={(event) =>
-                    onLevelFilterChange(
-                      event.target.checked
-                        ? [...selectedLevels, level]
-                        : selectedLevels.filter((value) => value !== level)
-                    )
-                  }
-                />{" "}
-                {level}
-              </label>
-            ))}
-          </div>
-        </details>
-        <button
-          style={{ ...secondaryButton, width: 34, padding: 0, fontSize: 14 }}
-          onClick={onTogglePause}
-          title={paused ? "Resume" : "Pause"}
-          aria-label={paused ? "Resume" : "Pause"}
-        >
-          {paused ? "▶" : "⏸"}
-        </button>
-        <button style={primaryButton} onClick={onFollowTail}>
-          Jump to latest
-        </button>
-      </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto" }}>
-        <input
-          ref={searchInputRef}
-          value={query}
-          placeholder="Search"
-          style={{ height: 24, minWidth: 200, borderRadius: 4 }}
-          onChange={(event) => onQueryChange(event.target.value)}
-        />
-        <button
-          style={{ ...subtleButton, width: 28, padding: 0, fontSize: 14 }}
-          onClick={onSearchPrev}
-          disabled={matchCount === 0}
-          title="Previous match"
-          aria-label="Previous match"
-        >
-          ↑
-        </button>
-        <button
-          style={{ ...subtleButton, width: 28, padding: 0, fontSize: 14 }}
-          onClick={onSearchNext}
-          disabled={matchCount === 0}
-          title="Next match"
-          aria-label="Next match"
-        >
-          ↓
-        </button>
-        {query && (
-          <span style={{ opacity: 0.75, minWidth: 52, textAlign: "right" }}>
-            {activeMatchLabel}
-          </span>
-        )}
-        <button style={primaryButton} onClick={onReload}>
-          Reload
-        </button>
-        <button style={secondaryButton} onClick={onClear}>
-          Clear
-        </button>
-      </div>
+          </details>
+
+          <button
+            style={{ ...secondaryButton, width: 34, padding: 0, fontSize: 14 }}
+            onClick={onTogglePause}
+            title={paused ? "Resume" : "Pause"}
+            aria-label={paused ? "Resume" : "Pause"}
+          >
+            {paused ? "▶" : "⏸"}
+          </button>
+
+          <button style={primaryButton} onClick={onFollowTail}>
+            Jump to latest
+          </button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto" }}>
+          <button style={primaryButton} onClick={onReload}>
+            Reload
+          </button>
+          <button style={secondaryButton} onClick={onClear}>
+            Clear
+          </button>
+        </div>
       </div>
     </header>
   );

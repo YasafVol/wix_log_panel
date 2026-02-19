@@ -58,13 +58,13 @@ This file tracks the implemented product features and expected runtime behavior 
 - Reload:
   - clears view and re-runs watcher/tailer attach flow.
 
-## 5) Filters and Search
+## 5) Filters and Controls
 
 - Controls layout:
   - arranged in two rows for readability and predictable wrapping:
     - row 1: title + dropped indicator on left, `Copy Visible` + `Export` on right
     - row 2 left: time mode first, then `Producer`, `Log Level`, pause/resume icon, `Jump to latest`
-    - row 2 right: `Search`, match navigation, `Reload`, `Clear`.
+    - row 2 right: `Reload`, `Clear`.
 - Producer filter:
   - checkbox list of discovered producers
   - quick actions: `All`, `None`.
@@ -73,25 +73,12 @@ This file tracks the implemented product features and expected runtime behavior 
   - checkbox list for `error`, `warn`, `info`, `debug`, `unknown`
   - quick actions: `All`, `None`, `Errors only`.
   - opens as a floating popover menu (does not push log list layout).
-- Search:
-  - case-insensitive substring on visible lines
-  - highlights all matching substrings in message text
-  - `Prev`/`Next` navigation with wraparound (up/down arrow icon buttons in toolbar)
-  - active match row highlighting
-  - keyboard shortcuts:
-    - `Cmd/Ctrl+F` focuses search
-    - `Enter` next match
-    - `Shift+Enter` previous match.
 
 ## 6) Copy and Export Actions
 
 - Toolbar actions:
   - `Copy Visible` copies current filtered lines to clipboard.
   - `Export` saves current filtered lines to a user-selected file.
-- Per-line actions:
-  - `Copy` copies that raw log line.
-  - `Send to chat` is a mock action (logs a mock send event + notification).
-  - line actions are hover-only to keep rows visually clean.
 
 ## 7) Empty States
 
@@ -105,7 +92,7 @@ This file tracks the implemented product features and expected runtime behavior 
 - Parser unit tests.
 - Store/ring-buffer unit tests.
 - Tailer edge-case tests (tail window, partials, truncation, no trailing newline).
-- Webview filtering/search utility tests.
+- Webview filtering utility tests.
 - Producer color generation tests (deterministic and fallback behavior).
 
 ## 9) Sample Data Contract (`plans/debug_log_spam_generator.mjs`)
